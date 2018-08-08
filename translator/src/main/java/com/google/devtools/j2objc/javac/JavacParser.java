@@ -169,7 +169,7 @@ public class JavacParser extends Parser {
 
       if (ErrorUtil.errorCount() == 0) {
         for (CompilationUnitTree ast : units) {
-          com.google.devtools.j2objc.ast.CompilationUnit unit = TreeConverter
+          CompilationUnit unit = TreeConverter
               .convertCompilationUnit(options, env, (JCTree.JCCompilationUnit) ast);
           processDiagnostics(env.diagnostics());
           handler.handleParsedUnit(unit.getSourceFilePath(), unit);

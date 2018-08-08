@@ -56,6 +56,7 @@ class Options {
   private String sourcepath;
   private String classpath;
   private String bootclasspath;
+  private File proGuardUsageFile;
   private List<String> whitelistFiles = Lists.newArrayList();
   private List<String> blacklistFiles = Lists.newArrayList();
   private List<String> sourceFiles = Lists.newArrayList();
@@ -85,6 +86,14 @@ class Options {
 
   public String getBootclasspath() {
     return bootclasspath != null ? bootclasspath : System.getProperty("sun.boot.class.path");
+  }
+
+  public File getProGuardUsageFile() {
+    return proGuardUsageFile;
+  }
+
+  public void setProGuardUsageFile(File proGuardUsageFile) {
+    this.proGuardUsageFile = proGuardUsageFile;
   }
 
   public List<String> getWhitelistFiles() {
@@ -186,6 +195,11 @@ class Options {
           usage("--sourcefilelist requires an argument");
         }
         options.addManifest(args[nArg]);
+      } else if (arg.equals("--dead-code-report")) {
+        if (++nArg == args.length) {
+          usage("--dead-code-report requires an argument");
+        }
+        options.proGuardUsageFile = new File(args[nArg]);
       } else if (arg.startsWith(XBOOTCLASSPATH)) {
         options.bootclasspath = arg.substring(XBOOTCLASSPATH.length());
       } else if (arg.equals("-encoding")) {

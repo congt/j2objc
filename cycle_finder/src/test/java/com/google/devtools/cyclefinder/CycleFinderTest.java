@@ -38,6 +38,7 @@ public class CycleFinderTest extends TestCase {
   List<List<Edge>> cycles;
   List<String> whitelistEntries;
   List<String> blacklistEntries;
+  List<String> deadCodeEntries;
   boolean printReferenceGraph;
   ReferenceGraph referenceGraph;
 
@@ -52,6 +53,7 @@ public class CycleFinderTest extends TestCase {
     inputFiles = new ArrayList<>();
     whitelistEntries = new ArrayList<>();
     blacklistEntries = new ArrayList<>();
+    deadCodeEntries = new ArrayList<>();
     printReferenceGraph = false;
     referenceGraph = null;
   }
@@ -389,6 +391,37 @@ public class CycleFinderTest extends TestCase {
     assertCycle("LA.$Lambda$1;", "LA;");
   }
 
+  public void testRemovingDeadClassesWhenFindingCycles() throws Exception {
+    addSourceFile("A.java", "class A {}");
+    addSourceFile("B.java", "class B { C c; }");
+    addSourceFile("C.java", "class C { B b; }");
+    deadCodeEntries.add("B");
+    deadCodeEntries.add("C");
+    findCycles();
+    assertNoCycles();
+  }
+
+  public void testRemovingDeadInnerClassesWhenFindingCycles() throws Exception {
+    addSourceFile("A.java", 
+        "class A {\n"
+        + "  class B { A a; }\n"
+        + "  B b;\n}");
+    deadCodeEntries.add("A$B");
+    deadCodeEntries.add("A:");
+    deadCodeEntries.add("    B b");
+    findCycles();
+    assertNoCycles();
+  }
+
+  public void testRemovingDeadFieldWhenFindingCycles() throws Exception {
+    addSourceFile("A.java", "class A { B b; }");
+    addSourceFile("B.java", "class B { A a; }");
+    deadCodeEntries.add("B:");
+    deadCodeEntries.add("    A a");
+    findCycles();
+    assertNoCycles();
+  }
+
   public void testPrintReferenceGraph() throws Exception {
     addSourceFile("A.java", "class A { B<? extends C> b; }");
     addSourceFile("B.java", "class B<T> { T t; }");
@@ -451,6 +484,11 @@ public class CycleFinderTest extends TestCase {
       File blacklistFile = new File(tempDir, "type_filter");
       Files.write(Joiner.on("\n").join(blacklistEntries), blacklistFile, Charset.defaultCharset());
       options.addBlacklistFile(blacklistFile.getAbsolutePath());
+    }
+    if (!deadCodeEntries.isEmpty()) {
+      File deadCodeFile = new File(tempDir, "dead_code");
+      Files.write(Joiner.on("\n").join(deadCodeEntries), deadCodeFile, Charset.defaultCharset());
+      options.setProGuardUsageFile(deadCodeFile);
     }
     options.setSourceFiles(inputFiles);
     options.setClasspath(System.getProperty("java.class.path"));

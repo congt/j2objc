@@ -337,7 +337,9 @@ public class GraphBuilder {
 
     @Override
     public boolean visit(TypeDeclaration node) {
-      handleTypeDeclaration(node, node.getTypeElement());
+      if (!node.isDeadClass()) {
+        handleTypeDeclaration(node, node.getTypeElement());
+      }
       return true;
     }
 

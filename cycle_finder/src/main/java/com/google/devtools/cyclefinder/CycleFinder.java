@@ -20,11 +20,14 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.devtools.j2objc.ast.CompilationUnit;
 import com.google.devtools.j2objc.file.RegularInputFile;
+import com.google.devtools.j2objc.translate.DeadCodeEliminator;
 import com.google.devtools.j2objc.translate.LambdaTypeElementAdder;
 import com.google.devtools.j2objc.translate.OuterReferenceResolver;
+import com.google.devtools.j2objc.util.CodeReferenceMap;
 import com.google.devtools.j2objc.util.ErrorUtil;
 import com.google.devtools.j2objc.util.FileUtil;
 import com.google.devtools.j2objc.util.Parser;
+import com.google.devtools.j2objc.util.ProGuardUsageParser;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -141,11 +144,22 @@ public class CycleFinder {
     List<String> sourceFiles = options.getSourceFiles();
     File strippedDir = stripIncompatible(sourceFiles, parser);
 
+    final CodeReferenceMap deadCodeMap = options.getProGuardUsageFile() != null
+        ? ProGuardUsageParser.parseDeadCodeFile(options.getProGuardUsageFile())
+        : null;
+
     Parser.Handler handler = new Parser.Handler() {
       @Override
       public void handleParsedUnit(String path, CompilationUnit unit) {
         new LambdaTypeElementAdder(unit).run();
+	if (deadCodeMap != null) {
+          new DeadCodeEliminator(unit, deadCodeMap).run();
+        }
         new OuterReferenceResolver(unit).run();
+
+        if (deadCodeMap != null) {
+          DeadCodeEliminator.removeDeadClasses(unit, deadCodeMap);
+        }
         graphBuilder.visitAST(unit);
       }
     };
